@@ -38,6 +38,30 @@ joinBtn.addEventListener('click', () => {   // виконує код коли н
     const eventSource = new EventSource(`/events?room=${room}&username=${username}`);
 
     eventSource.onopen = () => {
+        const messagesDiv = document.getElementById('messages');
+
+        // викликається кожного разу коли сервер надсилає дані через SSE
+        eventSource.onmessage = (event) => {
+
+            const message = JSON.parse(event.data);     // event.data — текст який сервер надіслав (client.res.write('data: ...'))
+
+            // створюємо новий <div> елемент
+            const div = document.createElement('div');  //  створює новий HTML-елемент в пам'яті
+            div.className = 'message';
+
+            if (message.type === 'system') {
+                div.className = 'message system';
+                div.textContent = message.text;
+            } else {
+                div.textContent = message.username + ': ' + message.text;
+            }
+
+            // додаємо новий елемент в кінець messagesDiv
+            messagesDiv.appendChild(div);   // .appendChild(...) — додає цей елемент на сторінку
+
+            // автоскрол вниз до останнього повідомлення
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;   // scrollTop = scrollHeight — прокручує блок повідомлень до низу
+        };
         console.log('Підключено до сервера через SSE'); 
     };EventSource
     // EventSource — вбудований в браузер об'єкт для SSE, автоматично відкриває потокове з'єднання
