@@ -50,18 +50,27 @@ joinBtn.addEventListener('click', () => {   // виконує код коли н
             div.className = 'message';
             
             // оновлення списку користувачів — не виводимо в чат, а оновлюємо бічну панель
+            //  відображення статусів
             if (message.type === 'roomData') {
                 const usersUl = document.getElementById('users-ul');
-                usersUl.innerHTML = ''; // usersUl.innerHTML = '' — очищає весь вміст елемента (видаляє старий список)
+                usersUl.innerHTML = '';
 
                 for (const user of message.users) {
                     const li = document.createElement('li');
-                    li.textContent = user;
+
+                    const statusEmoji = {
+                        online: '🟢',
+                        away: '🟡',
+                        busy: '🔴'
+                    };
+
+                    li.textContent = statusEmoji[user.status] + ' ' + user.username;
                     usersUl.appendChild(li);
                 }
 
-                return; // далі код не виконуємо
+                return;
             }
+
 
             if (message.type === 'system') {
                 div.className = 'message system';
@@ -102,4 +111,21 @@ sendBtn.addEventListener('click', () => {
     });
 
     messageInput.value = ''; // очищаємо поле
+});
+
+
+//  надсилання зміни статусу
+const statusSelect = document.getElementById('status-select');
+
+statusSelect.addEventListener('change', () => {
+
+    fetch('/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            room,
+            username,
+            status: statusSelect.value
+        })
+    });
 });

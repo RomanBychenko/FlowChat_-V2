@@ -1,6 +1,11 @@
 import http from 'http';    // модуль Node.js для створення веб-серверів
 import fs from 'fs';    // модуль для роботи з файлами (File System)
 import path from 'path';    // модуль для роботи з шляхами до файлів і папок
+// підключаємо генератор ID
+import { messageIdGenerator } from 'flowchat-lib';
+
+// генератор унікальних ID для повідомлень (Лаба 1)
+const messageIds = messageIdGenerator();
 
 const PORT = 8080;
 
@@ -41,8 +46,11 @@ const server = http.createServer((req, res) => {
             return;
         }
 
-        // створюємо масив імен користувачів кімнати
-        const users = rooms[room].map((client) => client.username);     // .map((client) => client.username) — перетворює масив об'єктів {username, res} на масив рядків з іменами
+        // тепер зберігаємо ім'я і статус кожного користувача
+        const users = rooms[room].map((client) => ({
+            username: client.username,
+            status: client.status
+        }));
 
         broadcastToRoom(room, {
             type: 'roomData',
@@ -70,6 +78,7 @@ const server = http.createServer((req, res) => {
             const data = JSON.parse(body);
 
             broadcastToRoom(data.room, {
+                id: messageIds.next().value,
                 type: 'message',
                 username: data.username,
                 text: data.text
@@ -83,6 +92,36 @@ const server = http.createServer((req, res) => {
     }
 
     //  SSE endpoint 
+    //  зміна статусу користувача       // endpoint для зміни статусу   
+    if (url.pathname === '/status' && req.method === 'POST') {
+
+        let body = '';
+
+        req.on('data', (chunk) => {
+            body += chunk;
+        });
+
+        req.on('end', () => {
+            const data = JSON.parse(body);
+
+            // шукаємо клієнта в кімнаті за іменем і змінюємо статус
+            const client = rooms[data.room]?.find(
+                (c) => c.username === data.username
+            );
+
+            if (client) {
+                client.status = data.status;
+                broadcastRoomData(data.room);
+            }
+
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: true }));
+        });
+
+        return;
+    }
+
+
     if (url.pathname === '/events') {
         const room = url.searchParams.get('room');
         const username = url.searchParams.get('username');
@@ -98,7 +137,7 @@ const server = http.createServer((req, res) => {
         if (!rooms[room]) {
             rooms[room] = [];
         }
-        rooms[room].push({ username, res });
+        rooms[room].push({ username, res, status: 'online' });
 
         console.log(username + ' connected to room: ' + room);
 
