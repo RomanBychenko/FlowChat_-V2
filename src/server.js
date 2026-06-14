@@ -3,7 +3,8 @@ import fs from 'fs';    // модуль для роботи з файлами (F
 import path from 'path';    // модуль для роботи з шляхами до файлів і папок
 // підключаємо генератор ID
 import { messageIdGenerator } from 'flowchat-lib';
-import { EventBus } from 'flowchat-lib';
+// import { EventBus } from 'flowchat-lib';
+import { EventBus, withLogging } from 'flowchat-lib';
 
 // центральна шина подій чату
 const chatEvents = new EventBus();
@@ -52,7 +53,7 @@ const server = http.createServer((req, res) => {
     //                            (Request) - містить інформацію про запит. (Response) - відповідь сервера
 
     // надсилає повідомлення всім клієнтам у кімнаті
-    function broadcastToRoom(room, message) {
+    function _broadcastToRoom(room, message) {
 
         if (!rooms[room]) {
             return;
@@ -64,9 +65,16 @@ const server = http.createServer((req, res) => {
         }
     }
 
+    // обгортаємо логуванням (DEBUG — кожна розсилка)
+    const broadcastToRoom = withLogging(_broadcastToRoom, {
+        level: "DEBUG",
+        name: "broadcastToRoom",
+        logFile: "./logs/chat.log"
+    });
+
 
     // надсилає всім у кімнаті оновлений список користувачів
-    function broadcastRoomData(room) {
+    function _broadcastRoomData(room) {
 
         if (!rooms[room]) {
             return;
@@ -84,6 +92,14 @@ const server = http.createServer((req, res) => {
             online: users.length
         });
     }
+
+    // обгортаємо логуванням (INFO — зміна списку юзерів)
+    const broadcastRoomData = withLogging(_broadcastRoomData, {
+        level: "INFO",
+        name: "broadcastRoomData",
+        logFile: "./logs/chat.log"
+    });
+
 
 
     // парсимо URL разом з query-параметрами (?room=...&username=...)
