@@ -1,0 +1,9 @@
+{
+  "name": "flowchat-lib",
+  "version": "1.0.0",
+  "description": "FlowChat core library",
+  "author": "Roman",
+  "license": "MIT",
+  "type": "module",
+  "main": "index.js"
+}
