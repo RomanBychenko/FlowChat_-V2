@@ -3,6 +3,32 @@ import fs from 'fs';    // модуль для роботи з файлами (F
 import path from 'path';    // модуль для роботи з шляхами до файлів і папок
 // підключаємо генератор ID
 import { messageIdGenerator } from 'flowchat-lib';
+import { EventBus } from 'flowchat-lib';
+
+// центральна шина подій чату
+const chatEvents = new EventBus();
+
+//  Listener 1 — логування подій 
+chatEvents.on('user:join', (data) => {
+    console.log(`[EVENT] ${data.username} joined "${data.room}"`);
+});
+
+chatEvents.on('user:leave', (data) => {
+    console.log(`[EVENT] ${data.username} left "${data.room}"`);
+});
+
+chatEvents.on('message:new', (data) => {
+    console.log(`[EVENT] ${data.username} → "${data.room}": ${data.text}`);
+});
+
+// Listener 2 — статистика (незалежний від логера) 
+let totalMessages = 0;
+
+chatEvents.on('message:new', () => {
+    totalMessages++;
+    console.log(`[STATS] Total messages: ${totalMessages}`);
+});
+
 
 // генератор унікальних ID для повідомлень (Лаба 1)
 const messageIds = messageIdGenerator();
@@ -77,6 +103,12 @@ const server = http.createServer((req, res) => {
         req.on('end', () => {
             const data = JSON.parse(body);
 
+            chatEvents.emit('message:new', {
+                username: data.username,
+                room: data.room,
+                text: data.text
+            });
+
             broadcastToRoom(data.room, {
                 id: messageIds.next().value,
                 type: 'message',
@@ -144,12 +176,15 @@ const server = http.createServer((req, res) => {
         // повідомляємо всіх про новий список користувачів
         broadcastRoomData(room);
 
+        chatEvents.emit('user:join', { username, room });
+
 
         // коли користувач закриває вкладку — видаляємо з кімнати
         req.on('close', () => {
             rooms[room] = rooms[room].filter(client => client.res !== res);
             console.log(username + ' disconnected from room: ' + room);
             broadcastRoomData(room);
+            chatEvents.emit('user:leave', { username, room });
         });
 
         return;
