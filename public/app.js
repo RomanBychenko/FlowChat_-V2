@@ -33,4 +33,35 @@ joinBtn.addEventListener('click', () => {   // виконує код коли н
 
     // .textContent — змінює текст всередині елемента
     roomTitle.textContent = 'Кімната: ' + room;
+
+    // підключаємось до SSE — з'єднання яке сервер тримає відкритим
+    const eventSource = new EventSource(`/events?room=${room}&username=${username}`);
+
+    eventSource.onopen = () => {
+        console.log('Підключено до сервера через SSE'); 
+    };EventSource
+    // EventSource — вбудований в браузер об'єкт для SSE, автоматично відкриває потокове з'єднання
+    // SSE (Server-Sent Events) — це технологія, де: сервер постійно надсилає дані в браузер в реальному часі
+});
+
+// обробник кнопки "Відправити" 
+const messageInput = document.getElementById('message-input');
+const sendBtn = document.getElementById('send-btn');
+
+sendBtn.addEventListener('click', () => {
+
+    const text = messageInput.value.trim();
+
+    if (text === '') {
+        return;
+    }
+
+    // надсилаємо POST запит на сервер
+    fetch('/send', {    // fetch  відправляє дані на сервер
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, room, text })
+    });
+
+    messageInput.value = ''; // очищаємо поле
 });
