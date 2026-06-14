@@ -48,6 +48,20 @@ joinBtn.addEventListener('click', () => {   // виконує код коли н
             // створюємо новий <div> елемент
             const div = document.createElement('div');  //  створює новий HTML-елемент в пам'яті
             div.className = 'message';
+            
+            // оновлення списку користувачів — не виводимо в чат, а оновлюємо бічну панель
+            if (message.type === 'roomData') {
+                const usersUl = document.getElementById('users-ul');
+                usersUl.innerHTML = ''; // usersUl.innerHTML = '' — очищає весь вміст елемента (видаляє старий список)
+
+                for (const user of message.users) {
+                    const li = document.createElement('li');
+                    li.textContent = user;
+                    usersUl.appendChild(li);
+                }
+
+                return; // далі код не виконуємо
+            }
 
             if (message.type === 'system') {
                 div.className = 'message system';

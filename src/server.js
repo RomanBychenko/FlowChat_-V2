@@ -33,6 +33,25 @@ const server = http.createServer((req, res) => {
         }
     }
 
+
+    // надсилає всім у кімнаті оновлений список користувачів
+    function broadcastRoomData(room) {
+
+        if (!rooms[room]) {
+            return;
+        }
+
+        // створюємо масив імен користувачів кімнати
+        const users = rooms[room].map((client) => client.username);     // .map((client) => client.username) — перетворює масив об'єктів {username, res} на масив рядків з іменами
+
+        broadcastToRoom(room, {
+            type: 'roomData',
+            users: users,
+            online: users.length
+        });
+    }
+
+
     // парсимо URL разом з query-параметрами (?room=...&username=...)
     const url = new URL(req.url, `http://${req.headers.host}`);     // new URL(req.url, ...) — розбирає адресу на частини
 
@@ -83,10 +102,15 @@ const server = http.createServer((req, res) => {
 
         console.log(username + ' connected to room: ' + room);
 
+        // повідомляємо всіх про новий список користувачів
+        broadcastRoomData(room);
+
+
         // коли користувач закриває вкладку — видаляємо з кімнати
         req.on('close', () => {
             rooms[room] = rooms[room].filter(client => client.res !== res);
             console.log(username + ' disconnected from room: ' + room);
+            broadcastRoomData(room);
         });
 
         return;
