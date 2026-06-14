@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>FlowChat</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; }
+        #join-screen, #chat-screen { display: none; }
+        #messages { border: 1px solid #ccc; height: 300px; overflow-y: auto; padding: 10px; margin-bottom: 10px; }
+        .message { margin-bottom: 5px; }
+        .system { color: gray; font-style: italic; }
+        #users-list { border: 1px solid #ccc; padding: 10px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h1>FlowChat</h1>
+
+    <!-- Екран входу -->
+    <div id="join-screen">
+        <input type="text" id="username-input" placeholder="Твій нік">
+        <input type="text" id="room-input" placeholder="Назва кімнати">
+        <button id="join-btn">Увійти</button>
+    </div>
+
+    <!-- Екран чату -->
+    <div id="chat-screen">
+        <h3 id="room-title"></h3>
+
+        <div id="messages"></div>
+
+        <input type="text" id="message-input" placeholder="Повідомлення...">
+        <button id="send-btn">Відправити</button>
+
+        <div id="users-list">
+            <strong>Онлайн:</strong>
+            <ul id="users-ul"></ul>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
