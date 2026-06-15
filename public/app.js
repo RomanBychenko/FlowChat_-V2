@@ -77,6 +77,7 @@ joinBtn.addEventListener('click', () => {   // виконує код коли н
                 div.textContent = message.text;
             } else {
                 div.textContent = message.username + ': ' + message.text;
+                div.style.color = message.color;
             }
 
             // додаємо новий елемент в кінець messagesDiv

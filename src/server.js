@@ -8,6 +8,8 @@ import { EventBus, withLogging } from 'flowchat-lib';
 import { asyncFilterPromise } from 'flowchat-lib';
 import { BAD_WORDS, checkWordInMessage } from './moderation.js';
 import { PriorityQueue } from 'flowchat-lib';
+import { memoize } from 'flowchat-lib';
+import { computeUserColor } from './userColor.js';
 
 // центральна шина подій чату
 const chatEvents = new EventBus();
@@ -36,6 +38,12 @@ chatEvents.on('message:new', () => {
 
 // генератор унікальних ID для повідомлень (Лаба 1)
 const messageIds = messageIdGenerator();
+
+// Лаба 3 — мемоізований розрахунок кольору (LRU, максимум 5 кольорів в кеші)
+const getUserColor = memoize(computeUserColor, {
+    strategy: 'LRU',
+    maxSize: 5
+});
 
 const PORT = 8080;
 
@@ -213,7 +221,8 @@ const server = http.createServer((req, res) => {
                 id: messageIds.next().value,
                 type: 'message',
                 username: data.username,
-                text: data.text
+                text: data.text,
+                color: getUserColor(data.username)
             }, 1);
 
             res.writeHead(200, { 'Content-Type': 'application/json' });
