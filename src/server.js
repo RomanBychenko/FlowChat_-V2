@@ -10,6 +10,7 @@ import { BAD_WORDS, checkWordInMessage } from './moderation.js';
 import { PriorityQueue } from 'flowchat-lib';
 import { memoize } from 'flowchat-lib';
 import { computeUserColor } from './userColor.js';
+import { readLogLines } from 'flowchat-lib';
 
 // центральна шина подій чату
 const chatEvents = new EventBus();
@@ -121,7 +122,7 @@ function getContentType(filePath) {
 }
 
 // створення сервера
-const server = http.createServer((req, res) => {
+const server = http.createServer(async (req, res) => {
     //                            (Request) - містить інформацію про запит. (Response) - відповідь сервера
 
     // надсилає повідомлення всім клієнтам у кімнаті
@@ -231,6 +232,25 @@ const server = http.createServer((req, res) => {
 
         return;
     }
+
+
+    //  Лаба 6: стрім логів 
+    if (url.pathname === '/logs' && req.method === 'GET') {
+
+        res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+
+        try {
+            for await (const line of readLogLines('./logs/chat.log')) {
+                res.write(line + '\n');
+            }
+        } catch (error) {
+            res.write('\n[Помилка читання логів: ' + error.message + ']\n');
+        }
+
+        res.end();
+        return;
+    }
+
 
     //  SSE endpoint 
     //  зміна статусу користувача       // endpoint для зміни статусу   

@@ -143,3 +143,27 @@ statusSelect.addEventListener('change', () => {
     });
 });
 
+
+const logsBtn = document.getElementById('logs-btn');
+const logsOutput = document.getElementById('logs-output');
+
+let logsVisible = false;
+
+logsBtn.addEventListener('click', async () => {
+
+    if (logsVisible) {
+        logsOutput.style.display = 'none';
+        logsOutput.textContent = '';
+        logsBtn.textContent = 'Показати логи';
+        logsVisible = false;
+        return;
+    }
+
+    const response = await fetch('/logs');
+    const text = await response.text();
+
+    logsOutput.textContent = text;
+    logsOutput.style.display = 'block';
+    logsBtn.textContent = 'Сховати логи';
+    logsVisible = true;
+});
