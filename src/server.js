@@ -5,6 +5,8 @@ import path from 'path';    // модуль для роботи з шляхам�
 import { messageIdGenerator } from 'flowchat-lib';
 // import { EventBus } from 'flowchat-lib';
 import { EventBus, withLogging } from 'flowchat-lib';
+import { asyncFilterPromise } from 'flowchat-lib';
+import { BAD_WORDS, checkWordInMessage } from './moderation.js';
 
 // центральна шина подій чату
 const chatEvents = new EventBus();
@@ -116,8 +118,24 @@ const server = http.createServer((req, res) => {
         });
 
         // коли всі дані прийшли
-        req.on('end', () => {
+        req.on('end', async () => {
             const data = JSON.parse(body);
+
+            // Лаба 5 — асинхронна перевірка на погані слова
+            const foundBadWords = await asyncFilterPromise(
+                BAD_WORDS,
+                (word) => checkWordInMessage(word, data.text)
+            );
+
+            if (foundBadWords.length > 0) {
+                res.writeHead(200, { 'Content-Type': 'application/json' });     // встановлює HTTP-заголовок відповіді.
+                res.end(JSON.stringify({        // закінчує відповідь сервера.
+                    ok: false,
+                    blocked: true,
+                    badWords: foundBadWords
+                }));
+                return;
+            }
 
             chatEvents.emit('message:new', {
                 username: data.username,

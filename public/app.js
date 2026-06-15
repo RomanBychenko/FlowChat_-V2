@@ -95,6 +95,7 @@ joinBtn.addEventListener('click', () => {   // виконує код коли н
 const messageInput = document.getElementById('message-input');
 const sendBtn = document.getElementById('send-btn');
 
+
 sendBtn.addEventListener('click', () => {
 
     const text = messageInput.value.trim();
@@ -104,13 +105,24 @@ sendBtn.addEventListener('click', () => {
     }
 
     // надсилаємо POST запит на сервер
-    fetch('/send', {    // fetch  відправляє дані на сервер
+    fetch('/send', {    // // fetch  відправляє дані на сервер
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, room, text })
+    })
+    .then((res) => res.json())
+    .then((data) => {
+        // якщо повідомлення заблоковано — показуємо тільки собі
+        if (!data.ok && data.blocked) {
+            const div = document.createElement('div');
+            div.className = 'message system';
+            div.textContent = 'Заблоковано — знайдені слова: ' + data.badWords.join(', ');
+            messagesDiv.appendChild(div);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
     });
 
-    messageInput.value = ''; // очищаємо поле
+    messageInput.value = '';    // // очищаємо поле
 });
 
 
@@ -129,3 +141,4 @@ statusSelect.addEventListener('change', () => {
         })
     });
 });
+
