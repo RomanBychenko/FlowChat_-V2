@@ -7,6 +7,7 @@ import { messageIdGenerator } from 'flowchat-lib';
 import { EventBus, withLogging } from 'flowchat-lib';
 import { asyncFilterPromise } from 'flowchat-lib';
 import { BAD_WORDS, checkWordInMessage } from './moderation.js';
+import { PriorityQueue } from 'flowchat-lib';
 
 // центральна шина подій чату
 const chatEvents = new EventBus();
@@ -41,6 +42,67 @@ const PORT = 8080;
 // зберігаємо підключених клієнтів по кімнатах
 const rooms = {};
 
+// Лаба 4 — черга розсилки повідомлень з пріоритетом
+const broadcastQueue = new PriorityQueue();
+
+// додає повідомлення в черту
+function enqueueBroadcast(room, message, priority) {
+    broadcastQueue.enqueue({ room, message }, priority);
+}
+
+// кожні 50мс обробляємо одне повідомлення — спочатку з найвищим пріоритетом
+setInterval(() => {
+    if (!broadcastQueue.isEmpty()) {
+        const item = broadcastQueue.dequeue('highest');
+        broadcastToRoom(item.room, item.message);
+    }
+}, 50);
+
+// надсилає повідомлення всім клієнтам у кімнаті
+function _broadcastToRoom(room, message) {
+    if (!rooms[room]) {
+        return;
+    }
+    for (const client of rooms[room]) {
+        // формат SSE: "data: текст\n\n"
+        client.res.write(`data: ${JSON.stringify(message)}\n\n`);
+    }
+}
+
+// обгортаємо логуванням (DEBUG — кожна розсилка)
+const broadcastToRoom = withLogging(_broadcastToRoom, {
+    level: "DEBUG",
+    name: "broadcastToRoom",
+    logFile: "./logs/chat.log"
+});
+
+// надсилає всім у кімнаті оновлений список користувачів
+function _broadcastRoomData(room) {
+    if (!rooms[room]) {
+        return;
+    }
+
+    // тепер зберігаємо ім'я і статус кожного користувача
+    const users = rooms[room].map((client) => ({
+        username: client.username,
+        status: client.status
+    }));
+    // системне оновлення — пріоритет 10 (вищий)
+    enqueueBroadcast(room, {
+        type: 'roomData',
+        users: users,
+        online: users.length
+    }, 10);
+}
+
+// обгортаємо логуванням (INFO — зміна списку юзерів)
+const broadcastRoomData = withLogging(_broadcastRoomData, {
+    level: "INFO",
+    name: "broadcastRoomData",
+    logFile: "./logs/chat.log"
+});
+
+
 // визначаємо тип файлу за розширенням
 function getContentType(filePath) {
     const ext = path.extname(filePath);
@@ -55,6 +117,7 @@ const server = http.createServer((req, res) => {
     //                            (Request) - містить інформацію про запит. (Response) - відповідь сервера
 
     // надсилає повідомлення всім клієнтам у кімнаті
+    /*
     function _broadcastToRoom(room, message) {
 
         if (!rooms[room]) {
@@ -88,11 +151,12 @@ const server = http.createServer((req, res) => {
             status: client.status
         }));
 
-        broadcastToRoom(room, {
+        // системне оновлення — пріоритет 10 (вищий)
+        enqueueBroadcast(room, {
             type: 'roomData',
             users: users,
             online: users.length
-        });
+        }, 10);
     }
 
     // обгортаємо логуванням (INFO — зміна списку юзерів)
@@ -101,6 +165,7 @@ const server = http.createServer((req, res) => {
         name: "broadcastRoomData",
         logFile: "./logs/chat.log"
     });
+    */
 
 
 
@@ -143,12 +208,13 @@ const server = http.createServer((req, res) => {
                 text: data.text
             });
 
-            broadcastToRoom(data.room, {
+            // звичайне повідомлення — пріоритет 1 (нижчий)
+            enqueueBroadcast(data.room, {
                 id: messageIds.next().value,
                 type: 'message',
                 username: data.username,
                 text: data.text
-            });
+            }, 1);
 
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: true }));
