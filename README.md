@@ -1,7 +1,122 @@
 "# FlowChat_-V2" 
 
-node src/server.js
-http://localhost:8080
+# FlowChat
+
+Чат-менеджер з реалізацією всіх лабораторних робіт 2 семестру.
+Побудований на чистому Node.js без зовнішніх бібліотек (крім dev-tools).
+
+## Запуск
+
+1. Встановити залежності:
+   npm install
+
+2. Запустити сервер:
+   node src/server.js
+
+3. Відкрити в браузері:
+   http://localhost:8080
+
+4. Демонстрація генераторів (Лаба 1):
+   node examples/generators-demo.js
+
+## Структура проєкту
+
+flowchat/
+├── lib/                    ← бібліотека flowchat-lib (Лаба 2)
+│   ├── package.json        ← окремий пакет з name: "flowchat-lib"
+│   ├── index.js            ← єдина точка експорту
+│   ├── generator.js        ← Лаба 1
+│   ├── memoize.js          ← Лаба 3
+│   ├── priorityQueue.js    ← Лаба 4
+│   ├── asyncFilter.js      ← Лаба 5
+│   ├── logStream.js        ← Лаба 6
+│   ├── eventBus.js         ← Лаба 7
+│   ├── httpClient.js       ← Лаба 8
+│   ├── authProxy.js        ← Лаба 8
+│   └── logDecorator.js     ← Лаба 9
+├── src/
+│   ├── server.js           ← головний HTTP сервер
+│   ├── moderation.js       ← список поганих слів (Лаба 5)
+│   ├── userColor.js        ← чиста функція для мемоізації (Лаба 3)
+│   └── apiService.js       ← споживач через DI (Лаба 8)
+├── public/
+│   ├── index.html          ← інтерфейс чату
+│   └── app.js              ← клієнтська логіка
+├── examples/
+│   └── generators-demo.js  ← демо Лаби 1 і 2
+├── package.json            ← залежність: "flowchat-lib": "file:./lib"
+└── .gitignore
+
+## Де яка лабораторна
+
+### Лаба 1 — Generators and Iterators
+- Файл: lib/generator.js
+- messageIdGenerator() — нескінченний генератор унікальних ID
+- statusGenerator() — циклічний генератор статусів (online/away/offline)
+- runForTime(generator, seconds, cb, interval) — timeout iterator
+- Демо: node examples/generators-demo.js
+
+### Лаба 2 — Project Setup
+- lib/ — окрема бібліотека зі своїм package.json (name: "flowchat-lib")
+- package.json (root) — підключено як: "flowchat-lib": "file:./lib"
+- Імпорт скрізь через: import { ... } from 'flowchat-lib'
+- examples/ — окремий демо-проєкт що споживає бібліотеку
+
+### Лаба 3 — Memoization
+- Файл: lib/memoize.js
+- Стратегії: LRU, LFU, TTL, custom
+- Використання: src/userColor.js — колір ніка кешується через LRU (maxSize: 5)
+
+### Лаба 4 — Bi-directional Priority Queue
+- Файл: lib/priorityQueue.js
+- enqueue(value, priority), peek/dequeue(oldest|newest|highest|lowest)
+- Використання: src/server.js — черга розсилки (системні повідомлення пріоритет 10, звичайні — 1)
+
+### Лаба 5 — Async Array Function Variants
+- Файл: lib/asyncFilter.js
+- asyncFilterPromise(array, predicate, signal) — Promise версія
+- asyncFilterCallback(array, predicate, callback, signal) — Callback версія (error-first)
+- AbortController підтримка в обох версіях
+- Використання: src/server.js — перевірка повідомлень на погані слова
+
+### Лаба 6 — Streams / Async Iterators
+- Файл: lib/logStream.js
+- readLogLines(filePath) — async generator, читає файл по рядку без завантаження в пам'ять
+- Використання: GET /logs — стрімінг логів з chat.log
+
+### Лаба 7 — Reactive Communication
+- Файл: lib/eventBus.js
+- on(event, cb), off(event, cb), emit(event, data)
+- Кожен listener обгорнутий у try/catch — один зламаний не зупиняє інших
+- Використання: src/server.js — chatEvents (user:join, user:leave, message:new)
+- Два незалежних listener: логування і статистика
+
+### Лаба 8 — Auth Proxy
+- Файли: lib/httpClient.js, lib/authProxy.js, src/apiService.js
+- BaseHttpClient — не знає про auth
+- AuthProxy — інжектує заголовки (apiKey / bearer / jwt / oauth), підтримка 401→refresh
+- ApiService — отримує клієнт через конструктор (DI), не імпортує Base/Proxy
+- Демо endpoints: GET /demo/stats, GET /demo/admin
+
+### Лаба 9 — Logging Decorator
+- Файл: lib/logDecorator.js
+- withLogging(fn, { level, name, logFile })
+- Рівні: INFO / DEBUG / ERROR
+- ISO timestamp, sync і async функції, запис у файл logs/chat.log
+- Використання: broadcastToRoom (DEBUG), broadcastRoomData (INFO)
+
+## Технічні деталі
+
+- HTTP сервер: вбудований Node.js http модуль (без express)
+- Live-зв'язок: Server-Sent Events (SSE)
+- Авторизація: API Key і Bearer token через AuthProxy
+- Логи: logs/chat.log (не комітяться, в .gitignore)
+
+
+
+
+
+
 
 
 ##
