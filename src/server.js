@@ -11,6 +11,8 @@ import { PriorityQueue } from 'flowchat-lib';
 import { memoize } from 'flowchat-lib';
 import { computeUserColor } from './userColor.js';
 import { readLogLines } from 'flowchat-lib';
+import { BaseHttpClient, AuthProxy } from 'flowchat-lib';
+import { ApiService } from './apiService.js';
 
 // центральна шина подій чату
 const chatEvents = new EventBus();
@@ -47,6 +49,14 @@ const getUserColor = memoize(computeUserColor, {
 });
 
 const PORT = 8080;
+
+// Лаба 8 — ключі авторизації (з env або дефолт для розробки)
+const API_KEY = process.env.API_KEY || 'dev-secret-key';
+//              ^^^^^^^^^^^^^^^^^^^   ^^^^^^^^^^^^^^^^^^^
+//              якщо встановлено      значення за замовчуванням
+//              змінну середовища     (для локальної розробк
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || 'dev-admin-token';
+
 
 // зберігаємо підключених клієнтів по кімнатах
 const rooms = {};
@@ -230,6 +240,83 @@ const server = http.createServer(async (req, res) => {
             res.end(JSON.stringify({ ok: true }));
         });
 
+        return;
+    }
+
+
+    // === Лаба 8: захищені endpoints (вимагають авторизацію) ===
+
+    // захищено API-ключем (заголовок X-API-Key)
+    if (url.pathname === '/api/stats' && req.method === 'GET') {
+
+        if (req.headers['x-api-key'] !== API_KEY) {
+            res.writeHead(401, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Unauthorized' }));
+            return;
+        }
+
+        const stats = {
+            totalMessages,
+            roomsCount: Object.keys(rooms).length,
+            rooms: Object.keys(rooms).map((room) => ({
+                name: room,
+                online: rooms[room].length
+            }))
+        };
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(stats));
+        return;
+    }
+
+    // захищено Bearer-токеном (заголовок Authorization)
+    if (url.pathname === '/api/admin' && req.method === 'GET') {
+
+        if (req.headers['authorization'] !== `Bearer ${ADMIN_TOKEN}`) {
+            res.writeHead(401, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Unauthorized' }));
+            return;
+        }
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ message: 'Admin access granted', uptime: process.uptime() }));
+        return;
+    }
+
+    //  Лаба 8: демонстрація AuthProxy (складання через DI) 
+
+    if (url.pathname === '/demo/stats' && req.method === 'GET') {
+
+        const statsService = new ApiService(
+            new AuthProxy(new BaseHttpClient(), {
+                type: 'apiKey',
+                headerName: 'X-API-Key',
+                key: API_KEY
+            }),
+            `http://localhost:${PORT}`
+        );
+
+        const result = await statsService.get('/api/stats');
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(result));
+        return;
+    }
+
+    if (url.pathname === '/demo/admin' && req.method === 'GET') {
+
+        const adminService = new ApiService(
+            new AuthProxy(new BaseHttpClient(), {
+                type: 'bearer',
+                token: ADMIN_TOKEN
+            }),
+            `http://localhost:${PORT}`
+        );
+
+        const result = await adminService.get('/api/admin');
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(result));
         return;
     }
 

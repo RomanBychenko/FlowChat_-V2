@@ -144,6 +144,7 @@ statusSelect.addEventListener('change', () => {
 });
 
 
+// лаба 6
 const logsBtn = document.getElementById('logs-btn');
 const logsOutput = document.getElementById('logs-output');
 
@@ -166,4 +167,27 @@ logsBtn.addEventListener('click', async () => {
     logsOutput.style.display = 'block';
     logsBtn.textContent = 'Сховати логи';
     logsVisible = true;
+});
+
+
+// лаба 8
+const apiOutput = document.getElementById('api-output');
+
+document.getElementById('stats-btn').addEventListener('click', async () => {
+    const res = await fetch('/demo/stats');
+    const data = await res.json();
+    apiOutput.textContent = JSON.stringify(data, null, 2);
+});
+
+document.getElementById('admin-btn').addEventListener('click', async () => {
+    const res = await fetch('/demo/admin');
+    const data = await res.json();
+    apiOutput.textContent = JSON.stringify(data, null, 2);
+});
+
+document.getElementById('noauth-btn').addEventListener('click', async () => {
+    // прямий запит без AuthProxy — без заголовка X-API-Key
+    const res = await fetch('/api/stats');
+    const data = await res.json();
+    apiOutput.textContent = JSON.stringify(data, null, 2);
 });
